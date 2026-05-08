@@ -1,0 +1,42 @@
+# Build directories
+build/
+build*/
+Debug/
+Release/
+
+# IDE files
+.vs/
+.vscode/
+*.vcxproj*
+*.sln*
+*.user
+
+# Executables
+*.exe
+*.out
+
+# Object files
+*.obj
+*.o
+
+# CMake files
+CMakeCache.txt
+CMakeFiles/
+*.cmake
+
+# Temporary files
+*.tmp
+*.temp
+*.log
+
+# System files
+Thumbs.db
+.DS_Store
+
+# ImGui settings
+imgui.ini
+
+# Asset files (keep source, ignore compiled)
+*.png.bak
+*.bmp.bak
+*.ttf.bak

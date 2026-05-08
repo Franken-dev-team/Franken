@@ -1,0 +1,49 @@
+cmake_minimum_required(VERSION 3.20)
+project(CluxeEngine)
+
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+find_package(SDL3 CONFIG REQUIRED)
+
+add_executable(CluxeEditor
+    src/editor/main.cpp
+    src/core/window/CLX_Window.cpp
+    src/core/window/CLX_Window.h
+    src/core/input/CLX_Input.cpp
+    src/core/input/CLX_Input.h
+    src/core/time/CLX_Time.cpp
+    src/core/time/CLX_Time.h
+    src/core/renderer/CLX_Renderer2D.cpp
+    src/core/renderer/CLX_Renderer2D.h
+    src/game/Game.cpp
+    src/game/Game.h
+    include/imgui/imgui.cpp
+    include/imgui/imgui_demo.cpp
+    include/imgui/imgui_draw.cpp
+    include/imgui/imgui_tables.cpp
+    include/imgui/imgui_widgets.cpp
+    include/imgui/backends/imgui_impl_sdl3.cpp
+    include/imgui/backends/imgui_impl_sdlrenderer3.cpp
+)
+
+target_include_directories(CluxeEditor PRIVATE include include/imgui include/imgui/backends)
+
+if(WIN32)
+    target_link_libraries(CluxeEditor SDL3::SDL3)
+else()
+    target_link_libraries(CluxeEditor SDL3::SDL3)
+    
+    include(CheckCXXSourceCompiles)
+    set(CMAKE_REQUIRED_LIBRARIES m)
+    check_cxx_source_compiles("#include <cmath>\nint main() { return static_cast<int>(std::abs(-1.0)); }" NEEDS_MATH)
+    if(NEEDS_MATH)
+        target_link_libraries(CluxeEditor m)
+    endif()
+    
+    set(CMAKE_REQUIRED_LIBRARIES pthread)
+    check_cxx_source_compiles("#include <pthread.h>\nint main() { pthread_t t; pthread_create(&t, nullptr, nullptr, nullptr); return 0; }" NEEDS_PTHREAD)
+    if(NEEDS_PTHREAD)
+        target_link_libraries(CluxeEditor pthread)
+    endif()
+endif()
