@@ -25,6 +25,15 @@ private:
     SDL_Renderer* renderer;
     int displayWidth, displayHeight;
     bool shouldQuit;
+    bool showProperties;
+    bool showMainViewport;
+    bool showAudioMixer;
+    ImGuiID dockspace_id;
+    bool dockspaceInitialized;
+    
+    float clickedTextureX;
+    float clickedTextureY;
+    bool textureClicked;
 
 public:
     void Init(SDL_Window* window, SDL_Renderer* render);
@@ -35,4 +44,9 @@ public:
 
 private:
     std::string GetResourcePath(const std::string& filename);
+    void SetupDockingLayout();
+    void RenderPropertiesWindow();
+    void RenderMainViewportWindow();
+    void RenderAudioMixerWindow();
+    void RenderMenuBar();
 };

@@ -70,5 +70,73 @@ Pathing: Tetap diingatkan untuk tidak menggunakan Absolute Path dalam kode. Guna
 ## Rendering
 Engine ini menggunakan SDL3 dengan sistem Logical Resolution (1280x720). Untuk UI Editor, sistem akan otomatis switcch ke Native Resolution agar teks tetap tajam.
 
+## Sistem Docking UI (ImGui)
+
+### Overview
+Cluxe Engine menggunakan sistem docking window berbasis Dear ImGui yang memungkinkan pengaturan layout UI yang fleksibel.
+
+### Fitur Utama
+- **Multi-Window**: Properties, Main Viewport, Audio Mixer
+- **Drag & Drop Docking**: Semua window bisa di-drag dan di-dock
+- **Texture Click Detection**: Klik pada texture untuk mendapatkan koordinat X,Y
+- **Window Management**: Show/hide window melalui menu
+
+### Cara Penggunaan
+
+#### 1. Window Management
+- Buka menu **View** untuk toggle visibility window:
+  - **Properties**: Window untuk kontrol dan informasi
+  - **Main Viewport**: Tampilan utama game dengan texture
+  - **Audio Mixer**: Kontrol audio dan musik
+  - **Toggle Demo**: Tampilkan/hide ImGui demo window
+
+#### 2. Docking Windows
+- **Drag Tab**: Drag tab window ke posisi yang diinginkan
+- **Auto-Dock**: Window akan otomatis dock saat drag dekat edge
+- **Split Layout**: Window bisa di-split menjadi beberapa panel
+- **Reset Layout**: Menu **Layout → Reset Layout** untuk reset ke default
+
+#### 3. Texture Click Detection
+- Klik pada texture Player.bmp di **Main Viewport**
+- Koordinat klik akan muncul di window **Properties**
+- Koordinat X,Y ditampilkan dalam format floating point
+- Berguna untuk debugging posisi texture
+
+#### 4. Audio Mixer Controls
+- **Play/Pause/Stop**: Kontrol musik background
+- **Volume Slider**: Atur volume master (0.0 - 1.0)
+- **Mute Checkbox**: Mute/unmute audio
+- **Status Display**: Tampilkan status music playing/stopped
+
+### Struktur Kode
+
+#### Variabel Docking System
+```cpp
+bool showProperties;
+bool showMainViewport;
+bool showAudioMixer;
+ImGuiID dockspace_id;
+bool dockspaceInitialized;
+```
+
+#### Texture Click Detection
+```cpp
+float clickedTextureX;
+float clickedTextureY;
+bool textureClicked;
+```
+
+### Tips & Tricks
+1. **Layout Customization**: Sesuaikan layout sesuai kebutuhan workflow
+2. **Reset Layout**: Jika layout berantakan, gunakan reset layout
+3. **Texture Debugging**: Gunakan click detection untuk debugging posisi
+4. **Audio Testing**: Test audio melalui Audio Mixer window
+
+### Troubleshooting
+- **Window Hilang**: Gunakan menu View untuk show kembali
+- **Layout Rusak**: Reset layout melalui menu Layout
+- **Texture Tidak Muncul**: Pastikan file Player.bmp ada di folder assets/
+- **Audio Tidak Berfungsi**: Check file bg/bg.mp3 di folder assets/
+
 ## Kontribusi
 Jika ada update pada bagian Editor, pastikan tidak merusak sistem koordinat mouse pada gameplay,dan jangan lupa kasih Dokumentasi untuk cara penggunaan sistem terbaru tersebut

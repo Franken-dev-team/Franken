@@ -5,7 +5,7 @@ CLX_Window::CLX_Window() : window(nullptr), running(false) {
         return;
     }
     
-    window = SDL_CreateWindow("Cluxe Engine", 800, 600, 0);
+    window = SDL_CreateWindow("Cluxe Engine", 0, 0, SDL_WINDOW_FULLSCREEN);
     if (!window) {
         SDL_Quit();
         return;

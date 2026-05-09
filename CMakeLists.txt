@@ -16,6 +16,12 @@ add_executable(CluxeEditor
     src/core/time/CLX_Time.h
     src/core/renderer/CLX_Renderer2D.cpp
     src/core/renderer/CLX_Renderer2D.h
+    src/core/audio/miniaudio.c
+    src/core/audio/AudioManager.cpp
+    src/core/audio/AudioManager.h
+    src/editor/ui/AudioPanel.cpp
+    src/editor/ui/AudioPanel.h
+    src/editor/ui/UITheme.h
     src/game/Game.cpp
     src/game/Game.h
     include/imgui/imgui.cpp
@@ -27,7 +33,7 @@ add_executable(CluxeEditor
     include/imgui/backends/imgui_impl_sdlrenderer3.cpp
 )
 
-target_include_directories(CluxeEditor PRIVATE include include/imgui include/imgui/backends)
+target_include_directories(CluxeEditor PRIVATE include include/imgui include/imgui/backends include/miniaudio)
 
 if(WIN32)
     target_link_libraries(CluxeEditor SDL3::SDL3)
