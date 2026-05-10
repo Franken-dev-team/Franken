@@ -21,6 +21,8 @@ add_executable(CluxeEditor
     src/core/audio/AudioManager.h
     src/editor/ui/AudioPanel.cpp
     src/editor/ui/AudioPanel.h
+		src/editor/ui/2DGizmo.cpp
+		src/editor/ui/2DGizmo.h
     src/editor/ui/UITheme.h
     src/game/Game.cpp
     src/game/Game.h

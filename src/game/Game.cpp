@@ -2,6 +2,7 @@
 #include "../core/audio/AudioManager.h"
 #include "../editor/ui/AudioPanel.h"
 #include "../editor/ui/UITheme.h"
+#include "../editor/ui/2DGizmo.h"
 #include <cstdio>
 #include <string>
 #include <filesystem>
@@ -255,6 +256,8 @@ void Game::RenderMainViewportWindow() {
             if (clickedTextureX >= textureSize.x) clickedTextureX = textureSize.x - 1;
             if (clickedTextureY >= textureSize.y) clickedTextureY = textureSize.y - 1;
         }
+
+	Gizmo::Render(textureScreenPos.x + (textureSize.x / 2), textureScreenPos.y + (textureSize.x / 2));
     } else {
         ImGui::Text("Player texture not loaded");
     }
