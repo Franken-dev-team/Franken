@@ -34,6 +34,11 @@ private:
     float clickedTextureX;
     float clickedTextureY;
     bool textureClicked;
+    
+    bool isDragging;
+    float dragOffsetX;
+    float dragOffsetY;
+    bool gizmoActive;
 
 public:
     void Init(SDL_Window* window, SDL_Renderer* render);

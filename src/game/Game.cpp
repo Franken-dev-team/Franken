@@ -74,6 +74,11 @@ void Game::Init(SDL_Window* window, SDL_Renderer* render) {
     clickedTextureX = 0.0f;
     clickedTextureY = 0.0f;
     textureClicked = false;
+    
+    isDragging = false;
+    dragOffsetX = 0.0f;
+    dragOffsetY = 0.0f;
+    gizmoActive = false;
 }
 
 std::string Game::GetResourcePath(const std::string& filename) {
@@ -214,6 +219,19 @@ void Game::RenderPropertiesWindow() {
     ImGui::InputText("Input Text", inputText, sizeof(inputText));
     
     ImGui::Separator();
+    ImGui::Text("Image Position");
+    ImGui::Separator();
+    ImGui::Text("Current Position:");
+    ImGui::Text("X: %.2f", posX);
+    ImGui::Text("Y: %.2f", posY);
+    
+    if (isDragging) {
+        ImGui::TextColored(ImVec4(0.0f, 1.0f, 0.0f, 1.0f), "Status: Dragging");
+    } else {
+        ImGui::Text("Status: Idle");
+    }
+    
+    ImGui::Separator();
     ImGui::Text("Texture Click Coordinates");
     ImGui::Separator();
     
@@ -223,7 +241,7 @@ void Game::RenderPropertiesWindow() {
         ImGui::Text("Y: %.2f", clickedTextureY);
     } else {
         ImGui::Text("No texture clicked yet");
-        ImGui::Text("Click on the texture in Main Viewport");
+        ImGui::Text("Click on texture in Main Viewport");
     }
     
     ImGui::End();
@@ -245,19 +263,48 @@ void Game::RenderMainViewportWindow() {
         
         ImGui::Image((ImTextureID)playerTexture, textureSize);
         
-        if (ImGui::IsItemHovered() && ImGui::IsMouseClicked(0)) {
+        if (ImGui::IsItemHovered() && !Gizmo::IsActive()) {
+            if (ImGui::IsMouseClicked(0)) {
+                ImVec2 mousePos = ImGui::GetMousePos();
+                ImVec2 windowMousePos = ImVec2(mousePos.x - windowPos.x, mousePos.y - windowPos.y);
+                
+                clickedTextureX = mousePos.x - textureScreenPos.x;
+                clickedTextureY = mousePos.y - textureScreenPos.y;
+                textureClicked = true;
+                
+                dragOffsetX = windowMousePos.x - posX;
+                dragOffsetY = windowMousePos.y - posY;
+                isDragging = true;
+                
+                if (clickedTextureX < 0) clickedTextureX = 0;
+                if (clickedTextureY < 0) clickedTextureY = 0;
+                if (clickedTextureX >= textureSize.x) clickedTextureX = textureSize.x - 1;
+                if (clickedTextureY >= textureSize.y) clickedTextureY = textureSize.y - 1;
+            }
+        }
+        
+        if (isDragging && ImGui::IsMouseDragging(0) && !Gizmo::IsActive()) {
             ImVec2 mousePos = ImGui::GetMousePos();
-            clickedTextureX = mousePos.x - textureScreenPos.x;
-            clickedTextureY = mousePos.y - textureScreenPos.y;
-            textureClicked = true;
+            ImVec2 windowMousePos = ImVec2(mousePos.x - windowPos.x, mousePos.y - windowPos.y);
             
-            if (clickedTextureX < 0) clickedTextureX = 0;
-            if (clickedTextureY < 0) clickedTextureY = 0;
-            if (clickedTextureX >= textureSize.x) clickedTextureX = textureSize.x - 1;
-            if (clickedTextureY >= textureSize.y) clickedTextureY = textureSize.y - 1;
+            posX = windowMousePos.x - dragOffsetX;
+            posY = windowMousePos.y - dragOffsetY;
+            
+            if (posX < 0) posX = 0;
+            if (posY < 0) posY = 0;
+            if (posX > displayWidth - textureSize.x) posX = displayWidth - textureSize.x;
+            if (posY > displayHeight - textureSize.y) posY = displayHeight - textureSize.y;
+        }
+        
+        if (ImGui::IsMouseReleased(0)) {
+            isDragging = false;
         }
 
-	Gizmo::Render(textureScreenPos.x + (textureSize.x / 2), textureScreenPos.y + (textureSize.x / 2));
+	if (ImGui::IsWindowFocused() && ImGui::IsWindowHovered()) {
+		ImVec2 gizmoCenter = ImVec2(cursorPos.x + (textureSize.x / 2), cursorPos.y + (textureSize.y / 2));
+		Gizmo::Update(posX, posY, gizmoCenter);
+		Gizmo::Render(cursorPos.x + (textureSize.x / 2), cursorPos.y + (textureSize.y / 2));
+	}
     } else {
         ImGui::Text("Player texture not loaded");
     }
