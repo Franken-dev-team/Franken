@@ -27,6 +27,7 @@ add_executable(CluxeEditor
 	src/editor/ui/2DGameObject.h
 	src/editor/ui/SelectionRect.cpp
 	src/editor/ui/SelectionRect.h
+	src/editor/ui/PopUpMenu.h
     src/editor/ui/UITheme.h
     src/game/Game.cpp
     src/game/Game.h

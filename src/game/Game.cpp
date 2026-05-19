@@ -5,6 +5,7 @@
 #include "../editor/ui/2DGizmo.h"
 #include "../editor/ui/2DGameObject.h"
 #include "../editor/ui/SelectionRect.h"
+#include "../editor/ui/PopUpMenu.h"
 #include <SDL3/SDL_scancode.h>
 #include <cstdio>
 #include <imgui/backends/imgui_impl_sdl3.h>
@@ -258,6 +259,16 @@ void Game::RenderMainViewportWindow() {
     ImVec2 textureScreenPos = ImVec2(windowPos.x + cursorPos.x, windowPos.y + cursorPos.y);
 
     GameObject* hoveredObject = GameObject::GetHoveredObject();
+
+    if (ImGui::IsMouseClicked(ImGuiMouseButton_Right) && ImGui::IsWindowHovered()) {
+        ImGui::OpenPopup("menu");
+    }
+    PopUpMenu::Draw("menu",
+        PopUpMenu::PopUpItem{"Select All", "ctrl+a", [&]() { GameObject::SelectAll(); }},
+        PopUpMenu::PopUpItem{"Delete All", "", [&]() { GameObject::DestroyAll(); }},
+        PopUpMenu::PopUpItem{"Duplicate Selected", "ctrl+v", [&]() { GameObject::DuplicateSelected(); }},
+        PopUpMenu::PopUpItem{"Delete Selected", "ctrl+d", [&]() { GameObject::DestroySelected(); }}
+    );
 
     if (ImGui::Shortcut(ImGuiMod_Ctrl | ImGuiKey_MouseLeft) && hoveredObject != nullptr) {
         hoveredObject->toggleSelect();
