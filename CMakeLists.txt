@@ -21,8 +21,12 @@ add_executable(CluxeEditor
     src/core/audio/AudioManager.h
     src/editor/ui/AudioPanel.cpp
     src/editor/ui/AudioPanel.h
-		src/editor/ui/2DGizmo.cpp
-		src/editor/ui/2DGizmo.h
+	src/editor/ui/2DGizmo.cpp
+	src/editor/ui/2DGizmo.h
+	src/editor/ui/2DGameObject.cpp
+	src/editor/ui/2DGameObject.h
+	src/editor/ui/SelectionRect.cpp
+	src/editor/ui/SelectionRect.h
     src/editor/ui/UITheme.h
     src/game/Game.cpp
     src/game/Game.h
@@ -41,14 +45,14 @@ if(WIN32)
     target_link_libraries(CluxeEditor SDL3::SDL3)
 else()
     target_link_libraries(CluxeEditor SDL3::SDL3)
-    
+
     include(CheckCXXSourceCompiles)
     set(CMAKE_REQUIRED_LIBRARIES m)
     check_cxx_source_compiles("#include <cmath>\nint main() { return static_cast<int>(std::abs(-1.0)); }" NEEDS_MATH)
     if(NEEDS_MATH)
         target_link_libraries(CluxeEditor m)
     endif()
-    
+
     set(CMAKE_REQUIRED_LIBRARIES pthread)
     check_cxx_source_compiles("#include <pthread.h>\nint main() { pthread_t t; pthread_create(&t, nullptr, nullptr, nullptr); return 0; }" NEEDS_PTHREAD)
     if(NEEDS_PTHREAD)

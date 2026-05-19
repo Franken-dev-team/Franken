@@ -8,15 +8,13 @@
 
 class Game {
 private:
-    SDL_Texture* playerTexture;
-    float posX, posY;
     float timer;
     int currentFrame;
-    
+
     float buttonX, buttonY, buttonW, buttonH;
     SDL_Color buttonColor;
     bool isHovered;
-    
+
     bool showDemo;
     float sliderValue;
     int counter;
@@ -30,11 +28,11 @@ private:
     bool showAudioMixer;
     ImGuiID dockspace_id;
     bool dockspaceInitialized;
-    
+
     float clickedTextureX;
     float clickedTextureY;
     bool textureClicked;
-    
+
     bool isDragging;
     float dragOffsetX;
     float dragOffsetY;

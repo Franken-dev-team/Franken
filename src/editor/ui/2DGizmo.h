@@ -3,7 +3,7 @@
 
 class Gizmo {
 	public:
-		static void Update(float& posX, float& posY, ImVec2 center, float size = 100.0f);
+		static void Update(int posX, int posY, ImVec2 center, float size = 100.0f);
 		static void Render(int center_x, int center_y);
 		static bool IsActive();
 		static void Deactivate();

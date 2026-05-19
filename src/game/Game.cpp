@@ -3,21 +3,39 @@
 #include "../editor/ui/AudioPanel.h"
 #include "../editor/ui/UITheme.h"
 #include "../editor/ui/2DGizmo.h"
+#include "../editor/ui/2DGameObject.h"
+#include "../editor/ui/SelectionRect.h"
+#include <SDL3/SDL_scancode.h>
 #include <cstdio>
+#include <imgui/backends/imgui_impl_sdl3.h>
+#include <imgui/imgui.h>
 #include <string>
 #include <filesystem>
+#include <algorithm>
+
+GameObject* draggedObject = nullptr;
+ImVec2 selectionRectStart = ImVec2(0.0f, 0.0f);
 
 void Game::Init(SDL_Window* window, SDL_Renderer* render) {
     sdlWindow = window;
     renderer = render;
     shouldQuit = false;
-    
+    GameObject::Create({
+        .renderer = render,
+        .path = GetResourcePath("Player.bmp"),
+        .posX = 100,
+        .posY = 100,
+        .sizeX = 64,
+        .sizeY = 64,
+        .selected = false
+        });
+
     if (!AudioManager::GetInstance().Init()) {
         printf("Failed to initialize AudioManager\n");
     } else {
         printf("AudioManager initialized successfully\n");
     }
-    
+
     std::string musicPath = GetResourcePath("bg/bg.mp3");
     if (!musicPath.empty()) {
         printf("Found music file at: %s\n", musicPath.c_str());
@@ -25,44 +43,25 @@ void Game::Init(SDL_Window* window, SDL_Renderer* render) {
     } else {
         printf("Error: Background music file not found at assets/bg/bg.mp3\n");
     }
-    
+
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
     ImGuiIO& io = ImGui::GetIO();
     io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
     io.IniFilename = "imgui.ini";
-    
+
     SetupProfessionalTheme();
-    
+
     ImGui_ImplSDL3_InitForSDLRenderer(sdlWindow, renderer);
     ImGui_ImplSDLRenderer3_Init(renderer);
-    
-    std::string playerPath = GetResourcePath("Player.bmp");
-    if (playerPath.empty()) {
-        printf("Failed to resolve Player.bmp path\n");
-    }
-    
-    SDL_Surface* playerSurface = SDL_LoadBMP(playerPath.c_str());
-    playerTexture = nullptr;
-    if (playerSurface) {
-        playerTexture = SDL_CreateTextureFromSurface(renderer, playerSurface);
-        SDL_DestroySurface(playerSurface);
-        if (!playerTexture) {
-            printf("Failed to create texture from Player.bmp: %s\n", SDL_GetError());
-        }
-    } else {
-        printf("Failed to load Player.bmp: %s\n", SDL_GetError());
-    }
-    
+
     SDL_GetWindowSize(sdlWindow, &displayWidth, &displayHeight);
-    
+
     showDemo = false;
     sliderValue = 0.0f;
     counter = 0;
-    strcpy_s(inputText, sizeof(inputText), "Hello ImGui!");
-    
-    posX = 300.0f;
-    posY = 200.0f;
+    //strcpy_s(inputText, sizeof(inputText), "Hello ImGui!");
+
     timer = 0.0f;
     currentFrame = 0;
     showProperties = true;
@@ -70,11 +69,11 @@ void Game::Init(SDL_Window* window, SDL_Renderer* render) {
     showAudioMixer = true;
     dockspace_id = 0;
     dockspaceInitialized = false;
-    
+
     clickedTextureX = 0.0f;
     clickedTextureY = 0.0f;
     textureClicked = false;
-    
+
     isDragging = false;
     dragOffsetX = 0.0f;
     dragOffsetY = 0.0f;
@@ -83,17 +82,17 @@ void Game::Init(SDL_Window* window, SDL_Renderer* render) {
 
 std::string Game::GetResourcePath(const std::string& filename) {
     std::string resourcePath = "assets/" + filename;
-    
+
     if (!std::filesystem::exists(resourcePath)) {
         printf("Warning: Resource not found at %s, trying current directory\n", resourcePath.c_str());
         resourcePath = filename;
-        
+
         if (!std::filesystem::exists(resourcePath)) {
             printf("Error: Resource not found: %s\n", resourcePath.c_str());
             return "";
         }
     }
-    
+
     return resourcePath;
 }
 
@@ -105,7 +104,7 @@ void Game::Update(float dt) {
             shouldQuit = true;
         }
     }
-    
+
     timer += dt;
     if (timer > 0.1f) {
         currentFrame = (currentFrame + 1) % 6;
@@ -116,7 +115,7 @@ void Game::Update(float dt) {
 void Game::Render() {
     SDL_SetRenderDrawColor(renderer, 13, 13, 13, 255);
     SDL_RenderClear(renderer);
-    
+
     ImGui_ImplSDLRenderer3_NewFrame();
     ImGui_ImplSDL3_NewFrame();
     ImGui::NewFrame();
@@ -124,28 +123,28 @@ void Game::Render() {
     ImGui::SetNextWindowPos(viewport->WorkPos);
     ImGui::SetNextWindowSize(viewport->WorkSize);
     ImGui::SetNextWindowViewport(viewport->ID);
-    
+
     ImGuiWindowFlags window_flags = ImGuiWindowFlags_MenuBar | ImGuiWindowFlags_NoDocking;
     window_flags |= ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove;
     window_flags |= ImGuiWindowFlags_NoBringToFrontOnFocus | ImGuiWindowFlags_NoNavFocus;
-    
+
     ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
     ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
     ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
     ImGui::Begin("DockSpace", nullptr, window_flags);
     ImGui::PopStyleVar(3);
-    
+
     dockspace_id = ImGui::GetID("MyDockSpace");
     ImGui::DockSpace(dockspace_id, ImVec2(0.0f, 0.0f), ImGuiDockNodeFlags_None);
-    
+
     RenderMenuBar();
-    
+
     ImGui::End();
     if (!dockspaceInitialized) {
         SetupDockingLayout();
         dockspaceInitialized = true;
     }
-    
+
     if (showProperties) {
         RenderPropertiesWindow();
     }
@@ -155,11 +154,11 @@ void Game::Render() {
     if (showAudioMixer) {
         RenderAudioMixerWindow();
     }
-    
+
     if (showDemo) {
         ImGui::ShowDemoWindow(&showDemo);
     }
-    
+
     ImGui::Render();
     ImGui_ImplSDLRenderer3_RenderDrawData(ImGui::GetDrawData(), renderer);
     SDL_RenderPresent(renderer);
@@ -204,37 +203,37 @@ void Game::RenderMenuBar() {
 
 void Game::RenderPropertiesWindow() {
     ImGui::Begin("Properties", &showProperties);
-    
+
     if (ImGui::Button("Click Me!", ImVec2(-1, 40))) {
         printf("Button Clicked!\n");
         counter++;
     }
-    
+
     ImGui::Text("Counter: %d", counter);
-    
+
     ImGui::Separator();
-    
+
     ImGui::SliderFloat("Float Value", &sliderValue, 0.0f, 1.0f);
-    
+
     ImGui::InputText("Input Text", inputText, sizeof(inputText));
-    
+
     ImGui::Separator();
     ImGui::Text("Image Position");
     ImGui::Separator();
     ImGui::Text("Current Position:");
-    ImGui::Text("X: %.2f", posX);
-    ImGui::Text("Y: %.2f", posY);
-    
+    // ImGui::Text("X: %.2f", posX);
+    // ImGui::Text("Y: %.2f", posY);
+
     if (isDragging) {
         ImGui::TextColored(ImVec4(0.0f, 1.0f, 0.0f, 1.0f), "Status: Dragging");
     } else {
         ImGui::Text("Status: Idle");
     }
-    
+
     ImGui::Separator();
     ImGui::Text("Texture Click Coordinates");
     ImGui::Separator();
-    
+
     if (textureClicked) {
         ImGui::Text("Clicked Position:");
         ImGui::Text("X: %.2f", clickedTextureX);
@@ -243,95 +242,115 @@ void Game::RenderPropertiesWindow() {
         ImGui::Text("No texture clicked yet");
         ImGui::Text("Click on texture in Main Viewport");
     }
-    
+
     ImGui::End();
 }
 
 void Game::RenderMainViewportWindow() {
     ImGui::Begin("Main Viewport", &showMainViewport);
-    
+
     ImGui::Text("Main Game Viewport");
     ImGui::Text("Resolution: %dx%d", displayWidth, displayHeight);
-    
-    if (playerTexture) {
-        ImGui::SetCursorPos(ImVec2(posX, posY));
-        
-        ImVec2 cursorPos = ImGui::GetCursorPos();
-        ImVec2 windowPos = ImGui::GetWindowPos();
-        ImVec2 textureSize = ImVec2(64, 64);
-        ImVec2 textureScreenPos = ImVec2(windowPos.x + cursorPos.x, windowPos.y + cursorPos.y);
-        
-        ImGui::Image((ImTextureID)playerTexture, textureSize);
-        
-        if (ImGui::IsItemHovered() && !Gizmo::IsActive()) {
-            if (ImGui::IsMouseClicked(0)) {
-                ImVec2 mousePos = ImGui::GetMousePos();
-                ImVec2 windowMousePos = ImVec2(mousePos.x - windowPos.x, mousePos.y - windowPos.y);
-                
-                clickedTextureX = mousePos.x - textureScreenPos.x;
-                clickedTextureY = mousePos.y - textureScreenPos.y;
-                textureClicked = true;
-                
-                dragOffsetX = windowMousePos.x - posX;
-                dragOffsetY = windowMousePos.y - posY;
-                isDragging = true;
-                
-                if (clickedTextureX < 0) clickedTextureX = 0;
-                if (clickedTextureY < 0) clickedTextureY = 0;
-                if (clickedTextureX >= textureSize.x) clickedTextureX = textureSize.x - 1;
-                if (clickedTextureY >= textureSize.y) clickedTextureY = textureSize.y - 1;
-            }
-        }
-        
-        if (isDragging && ImGui::IsMouseDragging(0) && !Gizmo::IsActive()) {
-            ImVec2 mousePos = ImGui::GetMousePos();
-            ImVec2 windowMousePos = ImVec2(mousePos.x - windowPos.x, mousePos.y - windowPos.y);
-            
-            posX = windowMousePos.x - dragOffsetX;
-            posY = windowMousePos.y - dragOffsetY;
-            
-            if (posX < 0) posX = 0;
-            if (posY < 0) posY = 0;
-            if (posX > displayWidth - textureSize.x) posX = displayWidth - textureSize.x;
-            if (posY > displayHeight - textureSize.y) posY = displayHeight - textureSize.y;
-        }
-        
-        if (ImGui::IsMouseReleased(0)) {
-            isDragging = false;
-        }
+    GameObject::Render();
 
-	if (ImGui::IsWindowFocused() && ImGui::IsWindowHovered()) {
-		ImVec2 gizmoCenter = ImVec2(cursorPos.x + (textureSize.x / 2), cursorPos.y + (textureSize.y / 2));
-		Gizmo::Update(posX, posY, gizmoCenter);
-		Gizmo::Render(cursorPos.x + (textureSize.x / 2), cursorPos.y + (textureSize.y / 2));
-	}
-    } else {
-        ImGui::Text("Player texture not loaded");
+    ImVec2 cursorPos = ImGui::GetCursorPos();
+    ImVec2 windowPos = ImGui::GetWindowPos();
+    ImVec2 textureScreenPos = ImVec2(windowPos.x + cursorPos.x, windowPos.y + cursorPos.y);
+
+    GameObject* hoveredObject = GameObject::GetHoveredObject();
+
+    if (ImGui::Shortcut(ImGuiMod_Ctrl | ImGuiKey_MouseLeft) && hoveredObject != nullptr) {
+        hoveredObject->toggleSelect();
     }
-    
+
+    if (ImGui::Shortcut(ImGuiMod_Ctrl | ImGuiKey_A)) {
+        GameObject::SelectAll();
+    }
+
+    if (ImGui::Shortcut(ImGuiMod_Ctrl | ImGuiKey_V)) {
+        GameObject::DuplicateSelected();
+    }
+
+    if (ImGui::Shortcut(ImGuiMod_Ctrl | ImGuiKey_D)) {
+        GameObject::DestroySelected();
+    }
+
+    if (hoveredObject == nullptr && ImGui::IsMouseClicked(0) && !Gizmo::IsActive()) {
+        GameObject::DeselectAll();
+    }
+
+    if (ImGui::IsKeyDown(ImGuiMod_Ctrl) && ImGui::IsMouseDragging(0)) {
+        if (selectionRectStart.x == 0.0f && selectionRectStart.y == 0.0f) {
+            selectionRectStart = ImGui::GetMousePos();
+        }
+        SelectionRect::Render(selectionRectStart, ImGui::GetMousePos());
+    }
+
+    if (hoveredObject != nullptr && ImGui::IsMouseClicked(0) && !Gizmo::IsActive()) {
+        ImVec2 mousePos = ImGui::GetMousePos();
+
+        draggedObject = hoveredObject;
+
+        float maxTexX = (float)draggedObject->sizeX - 1.0f;
+        float maxTexY = (float)draggedObject->sizeY - 1.0f;
+
+        clickedTextureX = (maxTexX >= 0.0f) ? std::clamp(mousePos.x - textureScreenPos.x, 0.0f, maxTexX) : 0.0f;
+        clickedTextureY = (maxTexY >= 0.0f) ? std::clamp(mousePos.y - textureScreenPos.y, 0.0f, maxTexY) : 0.0f;
+        textureClicked = true;
+
+        dragOffsetX = mousePos.x - draggedObject->posX;
+        dragOffsetY = mousePos.y - draggedObject->posY;
+        isDragging = true;
+    }
+
+    if (isDragging && draggedObject != nullptr && ImGui::IsMouseDragging(0) && !Gizmo::IsActive()) {
+        ImVec2 mousePos = ImGui::GetMousePos();
+
+        float maxPosX = displayWidth - (float)draggedObject->sizeX;
+        float maxPosY = displayHeight - (float)draggedObject->sizeY;
+
+        draggedObject->posX = (maxPosX >= 0.0f) ? std::clamp(mousePos.x - dragOffsetX, 0.0f, maxPosX) : 0.0f;
+        draggedObject->posY = (maxPosY >= 0.0f) ? std::clamp(mousePos.y - dragOffsetY, 0.0f, maxPosY) : 0.0f;
+    }
+
+    if (!ImGui::IsMouseDown(0)) {
+        isDragging = false;
+        draggedObject = nullptr;
+        if (selectionRectStart.x != 0.0f && selectionRectStart.y != 0.0f) {
+            SelectionRect::SelectIntersectingGameObjects(GameObject::gameObjects);
+        }
+        selectionRectStart = ImVec2(0.0f, 0.0f);
+    }
+
+	if (ImGui::IsWindowFocused() && ImGui::IsWindowHovered() && hoveredObject != nullptr) {
+		ImVec2 gizmoCenter = ImVec2(cursorPos.x + ((float)hoveredObject->sizeX / 2), cursorPos.y + ((float)hoveredObject->sizeY / 2));
+		Gizmo::Update(hoveredObject->posX, hoveredObject->posY, gizmoCenter);
+		Gizmo::Render(cursorPos.x + ((float)hoveredObject->sizeX / 2), cursorPos.y + ((float)hoveredObject->sizeY / 2));
+	}
+
     ImGui::End();
 }
 
 void Game::RenderAudioMixerWindow() {
     ImGui::Begin("Audio Mixer", &showAudioMixer);
-    
+
     AudioManager& audio = AudioManager::GetInstance();
-    
+
     ImGui::Text("Audio Status");
     ImGui::Separator();
-    
+
     if (audio.IsMusicPlaying()) {
         ImGui::Text("Music: Playing");
     } else {
         ImGui::Text("Music: Stopped");
     }
-    
+
     ImGui::Text("Current: assets/bg/bg.mp3");
-    
+
     ImGui::Spacing();
     ImGui::Text("Controls");
     ImGui::Separator();
-    
+
     if (audio.IsMusicPlaying()) {
         if (ImGui::Button("Pause", ImVec2(80, 30))) {
             audio.PauseMusic();
@@ -341,36 +360,34 @@ void Game::RenderAudioMixerWindow() {
             audio.ResumeMusic();
         }
     }
-    
+
     ImGui::SameLine();
     if (ImGui::Button("Stop", ImVec2(80, 30))) {
         audio.StopMusic();
     }
-    
+
     ImGui::Spacing();
     ImGui::Text("Volume");
     ImGui::Separator();
-    
+
     static float volume = audio.GetMasterVolume();
     if (ImGui::SliderFloat("Master Volume", &volume, 0.0f, 1.0f)) {
         audio.SetMasterVolume(volume);
     }
-    
+
     static bool isMuted = audio.IsMuted();
     if (ImGui::Checkbox("Mute", &isMuted)) {
         audio.SetMuted(isMuted);
     }
-    
+
     ImGui::End();
 }
 
 void Game::Shutdown() {
-    if (playerTexture) {
-        SDL_DestroyTexture(playerTexture);
-    }
-    
+    GameObject::DestroyAll();
+
     AudioManager::GetInstance().Shutdown();
-    
+
     ImGui_ImplSDLRenderer3_Shutdown();
     ImGui_ImplSDL3_Shutdown();
     ImGui::DestroyContext();
