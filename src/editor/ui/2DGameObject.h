@@ -27,11 +27,15 @@ class GameObject {
         int posY;
         int sizeX;
         int sizeY;
+
         void toggleSelect();
         bool isSelected() const;
         void setSelected(bool selected);
         void select();
         void deselect();
+        void duplicate();
+        void destroy();
+
         static inline std::vector<GameObject> gameObjects;
         static void Create(const CreateArgs& args);
         static void Render();

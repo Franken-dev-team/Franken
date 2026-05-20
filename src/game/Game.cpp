@@ -16,7 +16,7 @@
 
 GameObject* draggedObject = nullptr;
 ImVec2 selectionRectStart = ImVec2(0.0f, 0.0f);
-
+GameObject* hoveredObject = nullptr;
 void Game::Init(SDL_Window* window, SDL_Renderer* render) {
     sdlWindow = window;
     renderer = render;
@@ -258,7 +258,9 @@ void Game::RenderMainViewportWindow() {
     ImVec2 windowPos = ImGui::GetWindowPos();
     ImVec2 textureScreenPos = ImVec2(windowPos.x + cursorPos.x, windowPos.y + cursorPos.y);
 
-    GameObject* hoveredObject = GameObject::GetHoveredObject();
+    if (!ImGui::IsPopupOpen("menuObj")) {
+        hoveredObject = GameObject::GetHoveredObject();
+    }
 
     if (ImGui::Shortcut(ImGuiMod_Ctrl | ImGuiKey_MouseLeft) && hoveredObject != nullptr) {
         hoveredObject->toggleSelect();
@@ -281,9 +283,30 @@ void Game::RenderMainViewportWindow() {
     }
 
     if (ImGui::IsMouseClicked(ImGuiMouseButton_Right) && ImGui::IsWindowHovered()) {
-        ImGui::OpenPopup("menu");
+        if (hoveredObject != nullptr) {
+            ImGui::OpenPopup("menuObj");
+        } else {
+            ImGui::OpenPopup("menu");
+        }
+    }
+    if (hoveredObject != nullptr) {
+        PopUpMenu::Draw("menuObj",
+            PopUpMenu::PopUpItem{"Select", "", [&]() {hoveredObject->select(); }},
+            PopUpMenu::PopUpItem{"Deselect", "", [&]() {hoveredObject->deselect(); }},
+            PopUpMenu::PopUpItem{"Duplicate", "", [&]() { hoveredObject->duplicate(); }},
+            PopUpMenu::PopUpItem{"Delete", "", [&]() {hoveredObject->destroy(); }}
+        );
     }
     PopUpMenu::Draw("menu",
+        PopUpMenu::PopUpItem{"New Object", "ctrl+a", [&]() { GameObject::Create({
+            .renderer = Game::renderer,
+            .path = GetResourcePath("Player.bmp"),
+            .posX = int(ImGui::GetMousePos().x),
+            .posY = int(ImGui::GetMousePos().y),
+            .sizeX = 64,
+            .sizeY = 64,
+            .selected = false,
+        }); }},
         PopUpMenu::PopUpItem{"Select All", "ctrl+a", [&]() { GameObject::SelectAll(); }},
         PopUpMenu::PopUpItem{"Delete All", "", [&]() { GameObject::DestroyAll(); }},
         PopUpMenu::PopUpItem{"Duplicate Selected", "ctrl+v", [&]() { GameObject::DuplicateSelected(); }},

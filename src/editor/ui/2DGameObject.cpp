@@ -96,6 +96,15 @@ void GameObject::deselect() {
     this->selected = false;
 }
 
+void GameObject::duplicate() {
+    GameObject copy = *this;
+    copy.posX -= 10;
+    copy.posY += 10;
+    gameObjects.push_back(copy);
+}
+
+void GameObject::destroy() {}
+
 void GameObject::DeselectAll() {
     for (int i = 0; i < gameObjects.size(); ++i) {
         gameObjects[i].selected = false;
