@@ -260,16 +260,6 @@ void Game::RenderMainViewportWindow() {
 
     GameObject* hoveredObject = GameObject::GetHoveredObject();
 
-    if (ImGui::IsMouseClicked(ImGuiMouseButton_Right) && ImGui::IsWindowHovered()) {
-        ImGui::OpenPopup("menu");
-    }
-    PopUpMenu::Draw("menu",
-        PopUpMenu::PopUpItem{"Select All", "ctrl+a", [&]() { GameObject::SelectAll(); }},
-        PopUpMenu::PopUpItem{"Delete All", "", [&]() { GameObject::DestroyAll(); }},
-        PopUpMenu::PopUpItem{"Duplicate Selected", "ctrl+v", [&]() { GameObject::DuplicateSelected(); }},
-        PopUpMenu::PopUpItem{"Delete Selected", "ctrl+d", [&]() { GameObject::DestroySelected(); }}
-    );
-
     if (ImGui::Shortcut(ImGuiMod_Ctrl | ImGuiKey_MouseLeft) && hoveredObject != nullptr) {
         hoveredObject->toggleSelect();
     }
@@ -287,8 +277,18 @@ void Game::RenderMainViewportWindow() {
     }
 
     if (hoveredObject == nullptr && ImGui::IsMouseClicked(0) && !Gizmo::IsActive()) {
-        GameObject::DeselectAll();
+        if (!ImGui::IsPopupOpen("menu")) GameObject::DeselectAll();
     }
+
+    if (ImGui::IsMouseClicked(ImGuiMouseButton_Right) && ImGui::IsWindowHovered()) {
+        ImGui::OpenPopup("menu");
+    }
+    PopUpMenu::Draw("menu",
+        PopUpMenu::PopUpItem{"Select All", "ctrl+a", [&]() { GameObject::SelectAll(); }},
+        PopUpMenu::PopUpItem{"Delete All", "", [&]() { GameObject::DestroyAll(); }},
+        PopUpMenu::PopUpItem{"Duplicate Selected", "ctrl+v", [&]() { GameObject::DuplicateSelected(); }},
+        PopUpMenu::PopUpItem{"Delete Selected", "ctrl+d", [&]() { GameObject::DestroySelected(); }}
+    );
 
     if (ImGui::IsKeyDown(ImGuiMod_Ctrl) && ImGui::IsMouseDragging(0)) {
         if (selectionRectStart.x == 0.0f && selectionRectStart.y == 0.0f) {
