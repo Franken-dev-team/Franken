@@ -4,7 +4,7 @@ project(CluxeEngine)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-find_package(SDL3 CONFIG REQUIRED)
+include_directories(include)
 
 add_executable(CluxeEditor
     src/editor/main.cpp
@@ -31,6 +31,8 @@ add_executable(CluxeEditor
     src/editor/ui/UITheme.h
     src/game/Game.cpp
     src/game/Game.h
+    src/core/font/FontManager.cpp
+    src/core/font/FontManager.h
     include/imgui/imgui.cpp
     include/imgui/imgui_demo.cpp
     include/imgui/imgui_draw.cpp
@@ -40,12 +42,15 @@ add_executable(CluxeEditor
     include/imgui/backends/imgui_impl_sdlrenderer3.cpp
 )
 
-target_include_directories(CluxeEditor PRIVATE include include/imgui include/imgui/backends include/miniaudio)
+target_include_directories(CluxeEditor PRIVATE include include/imgui include/imgui/backends include/miniaudio include/SDL3_ttf)
 
 if(WIN32)
-    target_link_libraries(CluxeEditor SDL3::SDL3)
+    target_link_libraries(CluxeEditor PRIVATE
+        "${CMAKE_SOURCE_DIR}/lib/SDL3/x64/SDL3.lib"
+        "${CMAKE_SOURCE_DIR}/lib/ttf/x64/SDL3_ttf.lib"
+    )
 else()
-    target_link_libraries(CluxeEditor SDL3::SDL3)
+    target_link_libraries(CluxeEditor PRIVATE SDL3)
 
     include(CheckCXXSourceCompiles)
     set(CMAKE_REQUIRED_LIBRARIES m)

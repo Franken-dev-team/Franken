@@ -1,5 +1,6 @@
 #include "Game.h"
 #include "../core/audio/AudioManager.h"
+#include "../core/font/FontManager.h"
 #include "../editor/ui/AudioPanel.h"
 #include "../editor/ui/UITheme.h"
 #include "../editor/ui/2DGizmo.h"
@@ -15,26 +16,23 @@
 #include <algorithm>
 
 GameObject* draggedObject = nullptr;
+GameObject* selectedObject = nullptr;
 ImVec2 selectionRectStart = ImVec2(0.0f, 0.0f);
 GameObject* hoveredObject = nullptr;
 void Game::Init(SDL_Window* window, SDL_Renderer* render) {
     sdlWindow = window;
     renderer = render;
     shouldQuit = false;
-    GameObject::Create({
-        .renderer = render,
-        .path = GetResourcePath("Player.bmp"),
-        .posX = 100,
-        .posY = 100,
-        .sizeX = 64,
-        .sizeY = 64,
-        .selected = false
-        });
+    GameObject::Create({render, GetResourcePath("Player.bmp"), 100, 100, 64, 64, false});
 
     if (!AudioManager::GetInstance().Init()) {
         printf("Failed to initialize AudioManager\n");
     } else {
         printf("AudioManager initialized successfully\n");
+    }
+
+    if (!FontManager::GetInstance().Init()) {
+        printf("Failed to initialize FontManager\n");
     }
 
     std::string musicPath = GetResourcePath("bg/bg.mp3");
@@ -275,11 +273,21 @@ void Game::RenderMainViewportWindow() {
     }
 
     if (ImGui::Shortcut(ImGuiMod_Ctrl | ImGuiKey_D)) {
+        if (selectedObject != nullptr) {
+            selectedObject = nullptr;
+            Gizmo::Deactivate();
+        }
         GameObject::DestroySelected();
     }
 
     if (hoveredObject == nullptr && ImGui::IsMouseClicked(0) && !Gizmo::IsActive()) {
-        if (!ImGui::IsPopupOpen("menu")) GameObject::DeselectAll();
+        if (!ImGui::IsPopupOpen("menu")) {
+            // Only deselect if we didn't just click a gizmo arrow
+            if (!Gizmo::IsHovered()) {
+                GameObject::DeselectAll();
+                selectedObject = nullptr;
+            }
+        }
     }
 
     if (ImGui::IsMouseClicked(ImGuiMouseButton_Right) && ImGui::IsWindowHovered()) {
@@ -294,19 +302,14 @@ void Game::RenderMainViewportWindow() {
             PopUpMenu::PopUpItem{"Select", "", [&]() {hoveredObject->select(); }},
             PopUpMenu::PopUpItem{"Deselect", "", [&]() {hoveredObject->deselect(); }},
             PopUpMenu::PopUpItem{"Duplicate", "", [&]() { hoveredObject->duplicate(); }},
-            PopUpMenu::PopUpItem{"Delete", "", [&]() {hoveredObject->destroy(); }}
+            PopUpMenu::PopUpItem{"Delete", "", [&]() {
+                if (selectedObject == hoveredObject) { selectedObject = nullptr; Gizmo::Deactivate(); }
+                hoveredObject->destroy();
+            }}
         );
     }
     PopUpMenu::Draw("menu",
-        PopUpMenu::PopUpItem{"New Object", "ctrl+a", [&]() { GameObject::Create({
-            .renderer = Game::renderer,
-            .path = GetResourcePath("Player.bmp"),
-            .posX = int(ImGui::GetMousePos().x),
-            .posY = int(ImGui::GetMousePos().y),
-            .sizeX = 64,
-            .sizeY = 64,
-            .selected = false,
-        }); }},
+        PopUpMenu::PopUpItem{"New Object", "ctrl+a", [&]() { GameObject::Create({Game::renderer, GetResourcePath("Player.bmp"), int(ImGui::GetMousePos().x), int(ImGui::GetMousePos().y), 64, 64, false}); }},
         PopUpMenu::PopUpItem{"Select All", "ctrl+a", [&]() { GameObject::SelectAll(); }},
         PopUpMenu::PopUpItem{"Delete All", "", [&]() { GameObject::DestroyAll(); }},
         PopUpMenu::PopUpItem{"Duplicate Selected", "ctrl+v", [&]() { GameObject::DuplicateSelected(); }},
@@ -323,7 +326,8 @@ void Game::RenderMainViewportWindow() {
     if (hoveredObject != nullptr && ImGui::IsMouseClicked(0) && !Gizmo::IsActive()) {
         ImVec2 mousePos = ImGui::GetMousePos();
 
-        draggedObject = hoveredObject;
+        selectedObject = hoveredObject;   // <-- persist selection
+        draggedObject  = hoveredObject;
 
         float maxTexX = (float)draggedObject->sizeX - 1.0f;
         float maxTexY = (float)draggedObject->sizeY - 1.0f;
@@ -356,10 +360,11 @@ void Game::RenderMainViewportWindow() {
         selectionRectStart = ImVec2(0.0f, 0.0f);
     }
 
-	if (ImGui::IsWindowFocused() && ImGui::IsWindowHovered() && hoveredObject != nullptr) {
-		ImVec2 gizmoCenter = ImVec2(cursorPos.x + ((float)hoveredObject->sizeX / 2), cursorPos.y + ((float)hoveredObject->sizeY / 2));
-		Gizmo::Update(hoveredObject->posX, hoveredObject->posY, gizmoCenter);
-		Gizmo::Render(cursorPos.x + ((float)hoveredObject->sizeX / 2), cursorPos.y + ((float)hoveredObject->sizeY / 2));
+	if (selectedObject != nullptr) {
+		float gcx = (float)selectedObject->posX + (float)selectedObject->sizeX / 2.0f;
+		float gcy = (float)selectedObject->posY + (float)selectedObject->sizeY / 2.0f;
+		Gizmo::Update(selectedObject->posX, selectedObject->posY, ImVec2(gcx, gcy));
+		Gizmo::Render(gcx, gcy);
 	}
 
     ImGui::End();
@@ -421,6 +426,7 @@ void Game::Shutdown() {
     GameObject::DestroyAll();
 
     AudioManager::GetInstance().Shutdown();
+    FontManager::GetInstance().Shutdown();
 
     ImGui_ImplSDLRenderer3_Shutdown();
     ImGui_ImplSDL3_Shutdown();

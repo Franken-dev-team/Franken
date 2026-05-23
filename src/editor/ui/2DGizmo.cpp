@@ -4,129 +4,121 @@
 
 int Gizmo::activeAxis = 0;
 
-float DistancePointToLine(ImVec2 point, ImVec2 lineStart, ImVec2 lineEnd) {
-	ImVec2 lineVec = ImVec2(lineEnd.x - lineStart.x, lineEnd.y - lineStart.y);
-	ImVec2 pointVec = ImVec2(point.x - lineStart.x, point.y - lineStart.y);
+// Shared last-known screen-space center, set each frame by Update()
+static ImVec2 s_gizmoCenter = ImVec2(0, 0);
+static float  s_gizmoSize   = 100.0f;
 
-	float lineLength = sqrtf(lineVec.x * lineVec.x + lineVec.y * lineVec.y);
-	if (lineLength == 0.0f) return sqrtf(pointVec.x * pointVec.x + pointVec.y * pointVec.y);
+static float DistancePointToLine(ImVec2 point, ImVec2 lineStart, ImVec2 lineEnd) {
+    ImVec2 lineVec  = ImVec2(lineEnd.x - lineStart.x, lineEnd.y - lineStart.y);
+    ImVec2 pointVec = ImVec2(point.x - lineStart.x,   point.y - lineStart.y);
 
-	float t = (pointVec.x * lineVec.x + pointVec.y * lineVec.y) / (lineLength * lineLength);
-	t = (t < 0.0f) ? 0.0f : (t > 1.0f) ? 1.0f : t;
+    float lineLength = sqrtf(lineVec.x * lineVec.x + lineVec.y * lineVec.y);
+    if (lineLength == 0.0f)
+        return sqrtf(pointVec.x * pointVec.x + pointVec.y * pointVec.y);
 
-	ImVec2 projection = ImVec2(lineStart.x + t * lineVec.x, lineStart.y + t * lineVec.y);
-	ImVec2 distanceVec = ImVec2(point.x - projection.x, point.y - projection.y);
+    float t = (pointVec.x * lineVec.x + pointVec.y * lineVec.y) / (lineLength * lineLength);
+    t = (t < 0.0f) ? 0.0f : (t > 1.0f) ? 1.0f : t;
 
-	return sqrtf(distanceVec.x * distanceVec.x + distanceVec.y * distanceVec.y);
+    ImVec2 proj    = ImVec2(lineStart.x + t * lineVec.x, lineStart.y + t * lineVec.y);
+    ImVec2 distVec = ImVec2(point.x - proj.x, point.y - proj.y);
+    return sqrtf(distVec.x * distVec.x + distVec.y * distVec.y);
 }
 
-void Gizmo::Update(int posX, int posY, ImVec2 center, float size) {
-	ImGuiIO& io = ImGui::GetIO();
-	ImVec2 mousePos = ImGui::GetMousePos();
-	ImVec2 windowPos = ImGui::GetWindowPos();
-	ImVec2 screenCenter = ImVec2(windowPos.x + center.x, windowPos.y + center.y);
+// center is already in screen space (absolute)
+void Gizmo::Update(int& posX, int& posY, ImVec2 center, float size) {
+    ImGuiIO& io     = ImGui::GetIO();
+    ImVec2 mousePos = ImGui::GetMousePos();
 
-	ImVec2 xAxisStart = screenCenter;
-	ImVec2 xAxisEnd = ImVec2(screenCenter.x + size, screenCenter.y);
-	ImVec2 yAxisStart = screenCenter;
-	ImVec2 yAxisEnd = ImVec2(screenCenter.x, screenCenter.y - size);
+    // Remember for IsHovered()
+    s_gizmoCenter = center;
+    s_gizmoSize   = size;
 
-	float hitboxSize = 20.0f;
+    ImVec2 sc       = center;
+    ImVec2 xAxisEnd = ImVec2(sc.x + size, sc.y);
+    ImVec2 yAxisEnd = ImVec2(sc.x, sc.y - size);
 
-	if (activeAxis == 0) {
-		float xDist = DistancePointToLine(mousePos, xAxisStart, xAxisEnd);
-		float yDist = DistancePointToLine(mousePos, yAxisStart, yAxisEnd);
+    const float hitbox = 12.0f;
 
-		if (xDist < hitboxSize) {
-			if (ImGui::IsMouseClicked(0)) {
-				activeAxis = 1;
-			}
-		} else if (yDist < hitboxSize) {
-			if (ImGui::IsMouseClicked(0)) {
-				activeAxis = 2;
-			}
-		}
-	} else {
-		if (ImGui::IsMouseDragging(0)) {
-			ImVec2 delta = io.MouseDelta;
-			if (activeAxis == 1) {
-				posX += delta.x;
-			} else if (activeAxis == 2) {
-				posY += delta.y;
-			}
-		}
+    if (activeAxis == 0) {
+        float xDist = DistancePointToLine(mousePos, sc, xAxisEnd);
+        float yDist = DistancePointToLine(mousePos, sc, yAxisEnd);
 
-		if (ImGui::IsMouseReleased(0)) {
-			activeAxis = 0;
-		}
-	}
+        if (xDist < hitbox && ImGui::IsMouseClicked(0)) {
+            activeAxis = 1;
+        } else if (yDist < hitbox && ImGui::IsMouseClicked(0)) {
+            activeAxis = 2;
+        }
+    } else {
+        if (ImGui::IsMouseDragging(0)) {
+            ImVec2 delta = io.MouseDelta;
+            if (activeAxis == 1) posX += (int)delta.x;
+            if (activeAxis == 2) posY += (int)delta.y;
+        }
+        if (ImGui::IsMouseReleased(0)) {
+            activeAxis = 0;
+        }
+    }
 }
 
 bool Gizmo::IsActive() {
-	return activeAxis != 0;
+    return activeAxis != 0;
+}
+
+bool Gizmo::IsHovered() {
+    if (s_gizmoCenter.x == 0 && s_gizmoCenter.y == 0) return false;
+    ImVec2 mousePos = ImGui::GetMousePos();
+    ImVec2 sc       = s_gizmoCenter;
+    ImVec2 xAxisEnd = ImVec2(sc.x + s_gizmoSize, sc.y);
+    ImVec2 yAxisEnd = ImVec2(sc.x, sc.y - s_gizmoSize);
+    const float hitbox = 12.0f;
+    return DistancePointToLine(mousePos, sc, xAxisEnd) < hitbox ||
+           DistancePointToLine(mousePos, sc, yAxisEnd) < hitbox;
 }
 
 void Gizmo::Deactivate() {
-	activeAxis = 0;
+    activeAxis = 0;
 }
 
-void Gizmo::Render(int center_x, int center_y) {
-	ImDrawList* draw_list = ImGui::GetWindowDrawList();
-	ImVec2 windowPos = ImGui::GetWindowPos();
-	ImVec2 screenPos = ImVec2(windowPos.x + center_x, windowPos.y + center_y);
+// ── private helpers ──────────────────────────────────────────────────────────
 
-	if (activeAxis != 0) {
-		float windowWidth = ImGui::GetWindowWidth();
-		float windowHeight = ImGui::GetWindowHeight();
-
-		ImU32 axisColor = (activeAxis == 1) ? IM_COL32(255, 0, 0, 40) : IM_COL32(0, 255, 0, 40);
-
-		if (activeAxis == 1) {
-			draw_list->AddLine(ImVec2(windowPos.x, screenPos.y), ImVec2(windowPos.x + windowWidth, screenPos.y), axisColor, 1.0f);
-
-			draw_list->AddRectFilledMultiColor(
-				ImVec2(screenPos.x - 100, screenPos.y - 1),
-				ImVec2(screenPos.x + 100, screenPos.y + 1),
-				IM_COL32(255, 0, 0, 0), IM_COL32(255, 0, 0, 150),
-				IM_COL32(255, 0, 0, 150), IM_COL32(255, 0, 0, 0)
-			);
-		} else if (activeAxis == 2) {
-			draw_list->AddLine(ImVec2(screenPos.x, windowPos.y), ImVec2(screenPos.x, windowPos.y + windowHeight), axisColor, 1.0f);
-
-			draw_list->AddRectFilledMultiColor(
-				ImVec2(screenPos.x - 1, screenPos.y - 100),
-				ImVec2(screenPos.x + 1, screenPos.y + 100),
-				IM_COL32(0, 255, 0, 0), IM_COL32(0, 255, 0, 0),
-				IM_COL32(0, 255, 0, 150), IM_COL32(0, 255, 0, 150)
-			);
-		}
-	}
+void Gizmo::DrawCircle(ImDrawList* draw_list, ImVec2 center) {
+    draw_list->AddCircleFilled(center, 6.0f, IM_COL32(255, 255, 255, 220));
+    draw_list->AddCircle(center, 6.0f, IM_COL32(0, 0, 0, 180), 0, 1.5f);
 }
 
-void Gizmo::drawCircle(ImDrawList* draw_list, ImVec2 center) {
-	draw_list->AddCircleFilled(center, 25.0f, IM_COL32(255, 255, 255, 100));
+void Gizmo::DrawArrows(ImDrawList* draw_list, ImVec2 sc, float size) {
+    const float lineThick = 3.0f;
+    const float headSize  = 10.0f;
+
+    // X axis (red)
+    ImU32 xCol = (activeAxis == 1) ? IM_COL32(255, 220, 0, 255) : IM_COL32(220, 50, 50, 230);
+    ImVec2 xEnd = ImVec2(sc.x + size, sc.y);
+    draw_list->AddLine(sc, xEnd, xCol, lineThick);
+    draw_list->AddTriangleFilled(
+        ImVec2(xEnd.x,            xEnd.y - headSize),
+        ImVec2(xEnd.x + headSize, xEnd.y),
+        ImVec2(xEnd.x,            xEnd.y + headSize),
+        xCol
+    );
+
+    // Y axis (green)
+    ImU32 yCol = (activeAxis == 2) ? IM_COL32(255, 220, 0, 255) : IM_COL32(50, 220, 50, 230);
+    ImVec2 yEnd = ImVec2(sc.x, sc.y - size);
+    draw_list->AddLine(sc, yEnd, yCol, lineThick);
+    draw_list->AddTriangleFilled(
+        ImVec2(yEnd.x - headSize, yEnd.y),
+        ImVec2(yEnd.x,            yEnd.y - headSize),
+        ImVec2(yEnd.x + headSize, yEnd.y),
+        yCol
+    );
 }
 
-void Gizmo::drawArrow(ImDrawList* draw_list, ImVec2 center) {
-	float arrowSize = 100.0f;
-	float headSize = 10.0f;
+// ── public Render ─────────────────────────────────────────────────────────────
+// center_x / center_y are screen-space (absolute) coordinates
+void Gizmo::Render(float center_x, float center_y, float size) {
+    ImDrawList* draw_list = ImGui::GetWindowDrawList();
+    ImVec2 sc             = ImVec2(center_x, center_y);
 
-	ImVec2 arrow_x_end = ImVec2(center.x + arrowSize, center.y);
-	ImVec2 arrow_y_end = ImVec2(center.x, center.y - arrowSize);
-
-	draw_list->AddLine(center, arrow_x_end, IM_COL32(255, 0, 0, 200), 3.0f);
-	draw_list->AddTriangleFilled(
-		ImVec2(arrow_x_end.x, arrow_x_end.y - headSize),
-		ImVec2(arrow_x_end.x + headSize, arrow_x_end.y),
-		ImVec2(arrow_x_end.x, arrow_x_end.y + headSize),
-		IM_COL32(255, 0, 0, 200)
-	);
-
-	draw_list->AddLine(center, arrow_y_end, IM_COL32(0, 255, 0, 200), 3.0f);
-	draw_list->AddTriangleFilled(
-		ImVec2(arrow_y_end.x - headSize, arrow_y_end.y),
-		ImVec2(arrow_y_end.x, arrow_y_end.y - headSize),
-		ImVec2(arrow_y_end.x + headSize, arrow_y_end.y),
-		IM_COL32(0, 255, 0, 200)
-	);
+    DrawArrows(draw_list, sc, size);
+    DrawCircle(draw_list, sc);
 }

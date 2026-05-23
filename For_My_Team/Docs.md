@@ -14,10 +14,6 @@ Cross-Platform: Instruksi ini berlaku untuk semua OS. Cukup pastikan struktur fo
 ### Windows:
 1. Install Visual Studio 2022 dengan C++ development tools
 2. Install CMake (versi 3.20 atau lebih baru)
-3. Install vcpkg (jika belum ada)
-4. Install packages yang dibutuhkan:
-   ```
-   [path_ke_vcpkg]\vcpkg install sdl3:x64-windows
    ```
    
    Catatan: ImGui sudah ada di folder include/, jadi tidak perlu install via vcpkg.
@@ -26,11 +22,9 @@ Cross-Platform: Instruksi ini berlaku untuk semua OS. Cukup pastikan struktur fo
    ```
    mkdir build
    cd build
-   cmake .. -DCMAKE_TOOLCHAIN_FILE="[path_ke_vcpkg]/scripts/buildsystems/vcpkg.cmake"
-   cmake --build . --config Debug
+   cmake .."
+   cmake --build .
    ```
-   
-   Catatan: [path_ke_vcpkg] adalah lokasi di mana folder vcpkg di-install di PC masing-masing.
 
 ### Linux:
 1. Install dependencies:

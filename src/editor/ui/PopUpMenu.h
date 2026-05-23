@@ -17,14 +17,17 @@ class PopUpMenu {
         template<typename F>
         PopUpItem(const char* label, const char* shortcut, F callback) -> PopUpItem<F>;
 
+        template<typename Item>
+        static void DrawItem(Item&& item) {
+            if (ImGui::MenuItem(item.label, item.shortcut)) {
+                item.callback();
+            }
+        }
+
         template<typename... Items>
         static void Draw(const std::string& title, Items&&... items) {
             if (ImGui::BeginPopup(title.c_str(), ImGuiPopupFlags_MouseButtonRight)) {
-                ([&]<typename Item>(Item&& item) {
-                    if (ImGui::MenuItem(item.label, item.shortcut)) {
-                        item.callback();
-                    }
-                }(std::forward<Items>(items)), ...);
+                (DrawItem(std::forward<Items>(items)), ...);
                 ImGui::EndPopup();
             }
         }
