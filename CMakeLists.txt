@@ -50,18 +50,21 @@ if(WIN32)
         "${CMAKE_SOURCE_DIR}/lib/ttf/x64/SDL3_ttf.lib"
     )
 else()
-    target_link_libraries(CluxeEditor PRIVATE SDL3)
+    target_link_libraries(CluxeEditor PRIVATE
+        SDL3
+        SDL3_ttf
+    )
 
     include(CheckCXXSourceCompiles)
     set(CMAKE_REQUIRED_LIBRARIES m)
     check_cxx_source_compiles("#include <cmath>\nint main() { return static_cast<int>(std::abs(-1.0)); }" NEEDS_MATH)
     if(NEEDS_MATH)
-        target_link_libraries(CluxeEditor m)
+	    target_link_libraries(CluxeEditor PRIVATE m)
     endif()
 
     set(CMAKE_REQUIRED_LIBRARIES pthread)
     check_cxx_source_compiles("#include <pthread.h>\nint main() { pthread_t t; pthread_create(&t, nullptr, nullptr, nullptr); return 0; }" NEEDS_PTHREAD)
     if(NEEDS_PTHREAD)
-        target_link_libraries(CluxeEditor pthread)
+	    target_link_libraries(CluxeEditor PRIVATE pthread)
     endif()
 endif()
