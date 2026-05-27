@@ -1,0 +1,17 @@
+[
+  {
+    "label": "build & run",
+    "command": "cd build && cmake .. && cmake --build . && cd .. && ./build/CluxeEditor",
+    "allow_concurrent_runs": false,
+  },
+  {
+    "label": "build",
+    "command": "cd build && cmake .. && cmake --build .",
+    "allow_concurrent_runs": false,
+  },
+  {
+    "label": "run",
+    "command": "./build/CluxeEditor",
+    "allow_concurrent_runs": false,
+  },
+]
