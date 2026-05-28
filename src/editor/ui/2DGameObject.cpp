@@ -24,6 +24,7 @@ void GameObject::Create(const CreateArgs& args) {
     }
     GameObject object = GameObject(
         (ImTextureID)texture,
+        gameObjects.size(),
         args.posX,
         args.posY,
         args.sizeX,
@@ -62,6 +63,7 @@ void GameObject::Update(int index) {
 
 void GameObject::Duplicate(int index) {
     GameObject copy = gameObjects[index];
+    copy.id = gameObjects.size();
     copy.posX -= 10;
     copy.posY += 10;
     gameObjects.push_back(copy);
@@ -97,13 +99,12 @@ void GameObject::deselect() {
 }
 
 void GameObject::duplicate() {
-    GameObject copy = *this;
-    copy.posX -= 10;
-    copy.posY += 10;
-    gameObjects.push_back(copy);
+   Duplicate(this->id);
 }
 
-void GameObject::destroy() {}
+void GameObject::destroy() {
+    Destroy(this->id);
+}
 
 void GameObject::DeselectAll() {
     for (int i = 0; i < gameObjects.size(); ++i) {

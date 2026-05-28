@@ -7,7 +7,7 @@
 class GameObject {
     private:
         bool selected;
-        GameObject(ImTextureID textureID, int posX, int posY, int sizeX, int sizeY, bool selected)
+        GameObject(ImTextureID textureID, int id, int posX, int posY, int sizeX, int sizeY, bool selected)
   		: posX(posX), posY(posY), sizeX(sizeX), sizeY(sizeY), textureID(textureID), selected(selected) {}
 
     public:
@@ -23,6 +23,7 @@ class GameObject {
 
         SDL_Texture* texture;
        	ImTextureID textureID;
+        int id;
         int posX;
         int posY;
         int sizeX;
