@@ -6,33 +6,10 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 include_directories(include)
 
+file(GLOB_RECURSE SOURCES "src/**.cpp" "src/**.h")
+
 add_executable(CluxeEditor
-    src/editor/main.cpp
-    src/core/window/CLX_Window.cpp
-    src/core/window/CLX_Window.h
-    src/core/input/CLX_Input.cpp
-    src/core/input/CLX_Input.h
-    src/core/time/CLX_Time.cpp
-    src/core/time/CLX_Time.h
-    src/core/renderer/CLX_Renderer2D.cpp
-    src/core/renderer/CLX_Renderer2D.h
-    src/core/audio/miniaudio.c
-    src/core/audio/AudioManager.cpp
-    src/core/audio/AudioManager.h
-    src/editor/ui/AudioPanel.cpp
-    src/editor/ui/AudioPanel.h
-	src/editor/ui/2DGizmo.cpp
-	src/editor/ui/2DGizmo.h
-	src/editor/ui/2DGameObject.cpp
-	src/editor/ui/2DGameObject.h
-	src/editor/ui/SelectionRect.cpp
-	src/editor/ui/SelectionRect.h
-	src/editor/ui/PopUpMenu.h
-    src/editor/ui/UITheme.h
-    src/game/Game.cpp
-    src/game/Game.h
-    src/core/font/FontManager.cpp
-    src/core/font/FontManager.h
+    ${SOURCES}
     include/imgui/imgui.cpp
     include/imgui/imgui_demo.cpp
     include/imgui/imgui_draw.cpp
