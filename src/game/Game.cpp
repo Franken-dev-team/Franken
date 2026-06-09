@@ -1,7 +1,7 @@
 #include "Game.h"
 #include "../core/audio/AudioManager.h"
 #include "../core/font/FontManager.h"
-#include "../editor/ui/AudioPanel.h"
+#include "../core/filesystem/ConfigManager.h"
 #include "../editor/ui/UITheme.h"
 #include "../editor/ui/2DGizmo.h"
 #include "../editor/ui/2DGameObject.h"
@@ -9,20 +9,28 @@
 #include "../editor/ui/PopUpMenu.h"
 #include <SDL3/SDL_scancode.h>
 #include <cstdio>
+#include <cstring>
+#include <ctime>
 #include <imgui/backends/imgui_impl_sdl3.h>
 #include <imgui/imgui.h>
 #include <string>
 #include <filesystem>
 #include <algorithm>
+#include <vector>
 
 GameObject* draggedObject = nullptr;
 GameObject* selectedObject = nullptr;
 ImVec2 selectionRectStart = ImVec2(0.0f, 0.0f);
 GameObject* hoveredObject = nullptr;
+
+char title[256] = "";
+char path[256] = "";
+
 void Game::Init(SDL_Window* window, SDL_Renderer* render) {
     sdlWindow = window;
     renderer = render;
     shouldQuit = false;
+    ConfigManager::Init();
     GameObject::Create({render, GetResourcePath("Player.bmp"), 100, 100, 64, 64, false});
 
     if (!AudioManager::GetInstance().Init()) {
@@ -59,13 +67,19 @@ void Game::Init(SDL_Window* window, SDL_Renderer* render) {
     showDemo = false;
     sliderValue = 0.0f;
     counter = 0;
-    //strcpy_s(inputText, sizeof(inputText), "Hello ImGui!");
+    #ifdef _WIN32
+    strcpy_s(inputText, sizeof(inputText), "Hello ImGui!");
+    #else
+    strcpy(inputText, "Hello ImGui!");
+    #endif
 
     timer = 0.0f;
     currentFrame = 0;
-    showProperties = true;
-    showMainViewport = true;
-    showAudioMixer = true;
+    showProperties = false;
+    showMainViewport = false;
+    showAudioMixer = false;
+    showProjectManager = true;
+    showProjectCreation = false;
     dockspace_id = 0;
     dockspaceInitialized = false;
 
@@ -153,6 +167,13 @@ void Game::Render() {
     if (showAudioMixer) {
         RenderAudioMixerWindow();
     }
+    if (showProjectManager) {
+        RenderProjectManagerWindow();
+    }
+
+    if (showProjectCreation) {
+        RenderProjectCreationWindow();
+    }
 
     if (showDemo) {
         ImGui::ShowDemoWindow(&showDemo);
@@ -171,6 +192,9 @@ void Game::RenderMenuBar() {
         if (ImGui::BeginMenu("File")) {
             if (ImGui::MenuItem("Exit")) {
                 shouldQuit = true;
+            }
+            if (ImGui::MenuItem("Projects")) {
+                showProjectManager = true;
             }
             ImGui::EndMenu();
         }
@@ -219,9 +243,10 @@ void Game::RenderPropertiesWindow() {
     ImGui::Separator();
     ImGui::Text("Image Position");
     ImGui::Separator();
-    ImGui::Text("Current Position:");
+    // ImGui::Text("Current Position:");
     // ImGui::Text("X: %.2f", posX);
     // ImGui::Text("Y: %.2f", posY);
+    ImGui::Text("current workspace: %s", currentWorkspace.c_str());
 
     if (isDragging) {
         ImGui::TextColored(ImVec4(0.0f, 1.0f, 0.0f, 1.0f), "Status: Dragging");
@@ -417,6 +442,81 @@ void Game::RenderAudioMixerWindow() {
     static bool isMuted = audio.IsMuted();
     if (ImGui::Checkbox("Mute", &isMuted)) {
         audio.SetMuted(isMuted);
+    }
+
+    ImGui::End();
+}
+
+void Game::RenderProjectManagerWindow() {
+    ImGui::Begin("Project Manager", &showProjectManager);
+    if (ImGui::Button("New Project", ImVec2(100, 25))) {
+        showProjectCreation = true;
+    }
+    if(ImGui::BeginTable("projects grid", 4)) {
+        const toml::array* projects = ConfigManager::GetArray("projects");
+        if (!projects) {
+            ImGui::EndTable();
+            return;
+        }
+
+        for (int i = 0; i < projects->size(); i++)
+           {
+                ImGui::TableNextColumn();
+                if (auto* project = (*projects)[i].as_table()) {
+                    if (auto title_node = project->get("title")) {
+                        std::string title_str = title_node->value_or(std::string("Untitled"));
+                        auto* path_node = project->get("path");
+                        std::string workspace_str = path_node ? path_node->value_or(std::string("Untitled")) : std::string("Untitled");
+                        ImGui::PushID(i);
+                        if (ImGui::Button(title_str.c_str(), ImVec2(100, 25))) {
+                            if (!workspace_str.empty() && std::filesystem::exists(workspace_str)) {
+                                showProjectManager = false;
+                                currentWorkspace = workspace_str;
+                                showMainViewport = true;
+                            } else {
+                                showProjectNotFound = true;
+                            }
+                        }
+                        ImGui::PopID();
+                    } else {
+                        ImGui::Text("Untitled");
+                    }
+                }
+           }
+           ImGui::EndTable();
+    }
+        if (showProjectNotFound) {
+            ImGui::OpenPopup("Project Not Found");
+        }
+
+        if (ImGui::BeginPopupModal("Project Not Found", nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
+            ImGui::Text("Error: Project not found");
+            if (ImGui::Button("OK", ImVec2(100, 25))) {
+                showProjectNotFound = false;
+                ImGui::CloseCurrentPopup();
+            }
+            ImGui::EndPopup();
+        }
+    ImGui::EndChild();
+}
+
+void Game::RenderProjectCreationWindow() {
+    ImGui::Begin("New Project", &showProjectCreation);
+    ImGui::InputText("title", title, IM_ARRAYSIZE(title));
+    ImGui::InputText("path", path, IM_ARRAYSIZE(path));
+
+    if (ImGui::Button("Create", ImVec2(100, 25))) {
+        ConfigManager::Set("path", path);
+        ConfigManager::Set("title", title);
+        ConfigManager::Save("projects");
+        showProjectCreation = false;
+        #ifdef _WIN32
+        strcpy_s(title, IM_ARRAYSIZE(title), "");
+        strcpy_s(path, IM_ARRAYSIZE(path), "");
+        #else
+        strcpy(title, "");
+        strcpy(path, "");
+        #endif
     }
 
     ImGui::End();

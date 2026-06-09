@@ -19,6 +19,7 @@ private:
     float sliderValue;
     int counter;
     char inputText[256];
+    std::string currentWorkspace;
     SDL_Window* sdlWindow;
     SDL_Renderer* renderer;
     int displayWidth, displayHeight;
@@ -26,6 +27,9 @@ private:
     bool showProperties;
     bool showMainViewport;
     bool showAudioMixer;
+    bool showProjectManager;
+    bool showProjectCreation;
+    bool showProjectNotFound = false;
     ImGuiID dockspace_id;
     bool dockspaceInitialized;
 
@@ -52,4 +56,6 @@ private:
     void RenderMainViewportWindow();
     void RenderAudioMixerWindow();
     void RenderMenuBar();
+    void RenderProjectManagerWindow();
+    void RenderProjectCreationWindow();
 };
