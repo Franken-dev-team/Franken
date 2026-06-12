@@ -12,15 +12,20 @@ public:
 
     void PlaySFX(const std::string& path);
     void PlayMusic(const std::string& path, bool loop = true);
+    void LoadAndPlayMusic(const std::string& path, bool loop = true);
     void PauseMusic();
     void ResumeMusic();
     void StopMusic();
     bool IsMusicPlaying();
     void SetMasterVolume(float volume);
     float GetMasterVolume();
+    void SetBGMVolume(float volume);
+    void SetSFXVolume(float volume);
     void SetMuted(bool muted);
     bool IsMuted();
     void StopAll();
+
+    std::string GetCurrentMusicPath() { return currentMusicPath; }
 
 private:
     AudioManager() = default;

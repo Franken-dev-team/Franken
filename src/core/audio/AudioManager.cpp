@@ -1,7 +1,8 @@
+#include "AudioManager.h"
+#include <cstdio>
+
 #define MINIAUDIO_IMPLEMENTATION
 #include <miniaudio.h>
-
-#include "AudioManager.h"
 
 AudioManager& AudioManager::GetInstance() {
     static AudioManager instance;
@@ -73,6 +74,11 @@ void AudioManager::PlayMusic(const std::string& path, bool loop) {
     ma_sound_start(&musicSound);
 }
 
+void AudioManager::LoadAndPlayMusic(const std::string& path, bool loop) {
+    StopMusic();
+    PlayMusic(path, loop);
+}
+
 void AudioManager::PauseMusic() {
     if (!initialized) return;
     ma_sound_stop(&musicSound);
@@ -86,7 +92,7 @@ void AudioManager::ResumeMusic() {
 void AudioManager::StopMusic() {
     if (!initialized) return;
     ma_sound_stop(&musicSound);
-    ma_sound_seek_to_pcm_frame(&musicSound, 0);
+    ma_sound_uninit(&musicSound);
 }
 
 bool AudioManager::IsMusicPlaying() {
@@ -96,11 +102,20 @@ bool AudioManager::IsMusicPlaying() {
 
 void AudioManager::SetMasterVolume(float volume) {
     if (!initialized) return;
-
     volume = (volume < 0.0f) ? 0.0f : (volume > 1.0f) ? 1.0f : volume;
     lastVolume = volume;
-    if (!isMuted) {
-        ma_engine_set_volume(&engine, volume);
+    if (!isMuted) ma_engine_set_volume(&engine, volume);
+}
+
+void AudioManager::SetBGMVolume(float volume) {
+    if (!initialized) return;
+    ma_sound_set_volume(&musicSound, volume);
+}
+
+void AudioManager::SetSFXVolume(float volume) {
+    if (!initialized) return;
+    for (auto& pair : sfxSounds) {
+        ma_sound_set_volume(&pair.second, volume);
     }
 }
 

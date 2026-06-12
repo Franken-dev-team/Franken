@@ -3,12 +3,15 @@
 #include <imgui/imgui.h>
 #include <string>
 #include <vector>
+#include <nlohmann/json.hpp>
+
+using json = nlohmann::json;
 
 class GameObject {
     private:
         bool selected;
         GameObject(ImTextureID textureID, int id, int posX, int posY, int sizeX, int sizeY, bool selected)
-  		: posX(posX), posY(posY), sizeX(sizeX), sizeY(sizeY), textureID(textureID), selected(selected) {}
+  		: id(id), posX(posX), posY(posY), sizeX(sizeX), sizeY(sizeY), textureID(textureID), selected(selected) {}
 
     public:
         struct CreateArgs {
@@ -28,6 +31,7 @@ class GameObject {
         int posY;
         int sizeX;
         int sizeY;
+        std::string texturePath;
 
         void toggleSelect();
         bool isSelected() const;
@@ -37,10 +41,15 @@ class GameObject {
         void duplicate();
         void destroy();
 
+        json ToJson() const;
+        static void FromJson(const json& j, SDL_Renderer* renderer);
+        static void SaveProject(const std::string& path);
+        static void LoadProject(const std::string& path, SDL_Renderer* renderer);
+
         static inline std::vector<GameObject> gameObjects;
         static void Create(const CreateArgs& args);
-        static void Render();
-        static GameObject* GetHoveredObject();
+        static void Render(ImVec2 originPos, ImVec2 offset = {0.0f, 0.0f});
+        static GameObject* GetHoveredObject(ImVec2 originPos, ImVec2 offset = {0.0f, 0.0f});
         static void Update(int index);
         static void Duplicate(int index);
         static void DuplicateSelected();

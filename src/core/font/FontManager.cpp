@@ -1,5 +1,15 @@
 #include "FontManager.h"
 #include <cstdio>
+#include <string>
+#include <vector>
+#include <algorithm>
+
+#ifdef _WIN32
+    #include <windows.h>
+#else
+    #include <unistd.h>
+    #include <limits.h>
+#endif
 
 FontManager& FontManager::GetInstance() {
     static FontManager instance;
@@ -9,17 +19,60 @@ FontManager& FontManager::GetInstance() {
 bool FontManager::Init() {
     if (m_initialized) return true;
 
+    // SDL3_ttf returns true on success, false on failure
     if (!TTF_Init()) {
-        printf("FontManager: TTF_Init failed: %s\n", SDL_GetError());
+        printf("FontManager: SDL_ttf initialization failed: %s\n", SDL_GetError());
         return false;
     }
 
     m_initialized = true;
-    printf("FontManager: initialized successfully\n");
+    printf("FontManager: TTF_Init Success\n");
 
-    // Load the default project font automatically
-    if (!LoadFont("default", "assets/font/font.ttf", 26.0f)) {
-        printf("FontManager: warning - default font not loaded\n");
+    std::string basepath = "";
+    const char* sdlBasePath = SDL_GetBasePath();
+    if (sdlBasePath) {
+        basepath = sdlBasePath;
+        SDL_free((void*)sdlBasePath); // Cast to void* for SDL_free
+    }
+    printf("FontManager: Base path = %s\n", basepath.c_str());
+
+    std::vector<std::string> fontPaths;
+    
+    // 1. Try paths relative to executable (Most reliable for deployed builds)
+    if (!basepath.empty()) {
+        fontPaths.push_back(basepath + "assets/font/font.ttf");
+        fontPaths.push_back(basepath + "assets/fonts/font.ttf");
+    }
+    
+    // 2. Try paths relative to working directory (For dev/IDE runs)
+    fontPaths.push_back("assets/font/font.ttf");
+    fontPaths.push_back("assets/fonts/font.ttf");
+    fontPaths.push_back("../assets/font/font.ttf");
+    fontPaths.push_back("../../assets/font/font.ttf");
+
+    #ifdef _WIN32
+        fontPaths.push_back("C:/Windows/Fonts/arial.ttf");
+        fontPaths.push_back("C:/Windows/Fonts/consola.ttf");
+    #endif
+
+    bool fontLoaded = false;
+    for (std::string& path : fontPaths) {
+        // Normalize path slashes for Windows if needed
+        std::replace(path.begin(), path.end(), '/', '\\');
+        
+        if (LoadFont("default", path, 32.0f)) {
+            printf("FontManager: SUCCESS! Loaded font from: %s\n", path.c_str());
+            TTF_SetFontStyle(GetFont("default"), TTF_STYLE_BOLD);
+            fontLoaded = true;
+            break;
+        } else {
+            printf("FontManager: Failed to load from: %s\n", path.c_str());
+        }
+    }
+
+    if (!fontLoaded) {
+        printf("FontManager: CRITICAL - Failed to load any font!\n");
+        return false;
     }
 
     return true;
@@ -27,11 +80,10 @@ bool FontManager::Init() {
 
 bool FontManager::LoadFont(const std::string& key, const std::string& path, float ptSize) {
     if (!m_initialized) {
-        printf("FontManager: not initialized\n");
+        printf("FontManager: Not initialized\n");
         return false;
     }
 
-    // Free existing font under the same key
     auto it = m_fonts.find(key);
     if (it != m_fonts.end()) {
         TTF_CloseFont(it->second);
@@ -39,21 +91,23 @@ bool FontManager::LoadFont(const std::string& key, const std::string& path, floa
     }
 
     TTF_Font* font = TTF_OpenFont(path.c_str(), ptSize);
+
     if (!font) {
-        printf("FontManager: failed to load '%s' (%s): %s\n",
-               key.c_str(), path.c_str(), SDL_GetError());
+        printf("FontManager: TTF_OpenFont error: %s\n", SDL_GetError());
         return false;
     }
 
     m_fonts[key] = font;
-    printf("FontManager: loaded font '%s' from '%s' at %.0fpt\n",
-           key.c_str(), path.c_str(), ptSize);
+    printf("FontManager: SUCCESS loaded font %s\n", path.c_str());
     return true;
 }
 
 TTF_Font* FontManager::GetFont(const std::string& key) const {
     auto it = m_fonts.find(key);
-    if (it == m_fonts.end()) return nullptr;
+    if (it == m_fonts.end()) {
+        printf("FontManager: Font with key '%s' not found\n", key.c_str());
+        return nullptr;
+    }
     return it->second;
 }
 
@@ -62,14 +116,14 @@ TTF_Font* FontManager::GetDefault() const {
 }
 
 void FontManager::Shutdown() {
-    for (auto& [key, font] : m_fonts) {
-        TTF_CloseFont(font);
+    for (auto& pair : m_fonts) {
+        TTF_CloseFont(pair.second);
     }
     m_fonts.clear();
 
     if (m_initialized) {
         TTF_Quit();
         m_initialized = false;
-        printf("FontManager: shutdown\n");
+        printf("FontManager: Shutdown\n");
     }
 }

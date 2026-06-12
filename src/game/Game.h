@@ -5,6 +5,7 @@
 #include <imgui/backends/imgui_impl_sdlrenderer3.h>
 #include <string>
 #include <filesystem>
+#include "../core/font/FontManager.h"
 
 class Game {
 private:
@@ -38,6 +39,15 @@ private:
     float dragOffsetY;
     bool gizmoActive;
 
+    int selectedIndex = -1; // Track by index in vector
+    int selectedObjectID = -1; // Track by unique ID
+    
+    ImVec2 cameraOffset = {0.0f, 0.0f};
+    bool isPanning = false;
+
+    bool showInspector;
+    void RenderInspectorWindow();
+
 public:
     void Init(SDL_Window* window, SDL_Renderer* render);
     void Update(float dt);
@@ -48,8 +58,18 @@ public:
 private:
     std::string GetResourcePath(const std::string& filename);
     void SetupDockingLayout();
+    void RenderMenuBar();
     void RenderPropertiesWindow();
     void RenderMainViewportWindow();
     void RenderAudioMixerWindow();
-    void RenderMenuBar();
+
+    std::string OpenFileDialog();
+    std::string SaveFileDialog();
+    
+    float masterVol = 1.0f;
+    float bgmVol = 0.8f;
+    float sfxVol = 0.6f;
+    float uiVol = 1.0f;
+    
+    ImVec2 lastMousePos = {0,0};
 };
