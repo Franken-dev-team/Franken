@@ -7,6 +7,7 @@
 #include "../editor/ui/2DGameObject.h"
 #include "../editor/ui/SelectionRect.h"
 #include "../editor/ui/PopUpMenu.h"
+#include "../editor/ui/FileExplorer.h"
 #include <SDL3/SDL_scancode.h>
 #include <cstdio>
 #include <cstring>
@@ -80,6 +81,7 @@ void Game::Init(SDL_Window* window, SDL_Renderer* render) {
     showAudioMixer = false;
     showProjectManager = true;
     showProjectCreation = false;
+    showFileExplorer = true;
     dockspace_id = 0;
     dockspaceInitialized = false;
 
@@ -173,6 +175,10 @@ void Game::Render() {
 
     if (showProjectCreation) {
         RenderProjectCreationWindow();
+    }
+
+    if (showFileExplorer) {
+        RenderFileExplorer();
     }
 
     if (showDemo) {
@@ -316,14 +322,10 @@ void Game::RenderMainViewportWindow() {
     }
 
     if (ImGui::IsMouseClicked(ImGuiMouseButton_Right) && ImGui::IsWindowHovered()) {
-        if (hoveredObject != nullptr) {
-            ImGui::OpenPopup("menuObj");
-        } else {
-            ImGui::OpenPopup("menu");
-        }
+        ImGui::OpenPopup("menu");
     }
     if (hoveredObject != nullptr) {
-        PopUpMenu::Draw("menuObj",
+        PopUpMenu::Draw("menu",
             PopUpMenu::PopUpItem{"Select", "", [&]() {hoveredObject->select(); }},
             PopUpMenu::PopUpItem{"Deselect", "", [&]() {hoveredObject->deselect(); }},
             PopUpMenu::PopUpItem{"Duplicate", "", [&]() { hoveredObject->duplicate(); }},
@@ -332,14 +334,15 @@ void Game::RenderMainViewportWindow() {
                 hoveredObject->destroy();
             }}
         );
+    } else {
+        PopUpMenu::Draw("menu",
+            PopUpMenu::PopUpItem{"New Object", "ctrl+a", [&]() { GameObject::Create({Game::renderer, GetResourcePath("Player.bmp"), int(ImGui::GetMousePos().x), int(ImGui::GetMousePos().y), 64, 64, false}); }},
+            PopUpMenu::PopUpItem{"Select All", "ctrl+a", [&]() { GameObject::SelectAll(); }},
+            PopUpMenu::PopUpItem{"Delete All", "", [&]() { GameObject::DestroyAll(); }},
+            PopUpMenu::PopUpItem{"Duplicate Selected", "ctrl+v", [&]() { GameObject::DuplicateSelected(); }},
+            PopUpMenu::PopUpItem{"Delete Selected", "ctrl+d", [&]() { GameObject::DestroySelected(); }}
+        );
     }
-    PopUpMenu::Draw("menu",
-        PopUpMenu::PopUpItem{"New Object", "ctrl+a", [&]() { GameObject::Create({Game::renderer, GetResourcePath("Player.bmp"), int(ImGui::GetMousePos().x), int(ImGui::GetMousePos().y), 64, 64, false}); }},
-        PopUpMenu::PopUpItem{"Select All", "ctrl+a", [&]() { GameObject::SelectAll(); }},
-        PopUpMenu::PopUpItem{"Delete All", "", [&]() { GameObject::DestroyAll(); }},
-        PopUpMenu::PopUpItem{"Duplicate Selected", "ctrl+v", [&]() { GameObject::DuplicateSelected(); }},
-        PopUpMenu::PopUpItem{"Delete Selected", "ctrl+d", [&]() { GameObject::DestroySelected(); }}
-    );
 
     if (ImGui::IsKeyDown(ImGuiMod_Ctrl) && ImGui::IsMouseDragging(0)) {
         if (selectionRectStart.x == 0.0f && selectionRectStart.y == 0.0f) {
@@ -472,6 +475,8 @@ void Game::RenderProjectManagerWindow() {
                             if (!workspace_str.empty() && std::filesystem::exists(workspace_str)) {
                                 showProjectManager = false;
                                 currentWorkspace = workspace_str;
+                                FileExplorer::SetRootPath(workspace_str);
+                                FileExplorer::SetPreviousPath(workspace_str);
                                 showMainViewport = true;
                             } else {
                                 showProjectNotFound = true;
@@ -519,6 +524,12 @@ void Game::RenderProjectCreationWindow() {
         #endif
     }
 
+    ImGui::End();
+}
+
+void Game::RenderFileExplorer() {
+    ImGui::Begin("File Explorer");
+    FileExplorer::Render();
     ImGui::End();
 }
 

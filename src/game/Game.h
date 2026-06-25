@@ -29,6 +29,7 @@ private:
     bool showAudioMixer;
     bool showProjectManager;
     bool showProjectCreation;
+    bool showFileExplorer;
     bool showProjectNotFound = false;
     ImGuiID dockspace_id;
     bool dockspaceInitialized;
@@ -58,4 +59,5 @@ private:
     void RenderMenuBar();
     void RenderProjectManagerWindow();
     void RenderProjectCreationWindow();
+    void RenderFileExplorer();
 };
